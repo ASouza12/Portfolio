@@ -1,0 +1,548 @@
+---
+title: "Predictive Modeling Final"
+author: "Alisha Souza"
+date: "2023-12-10"
+output: word_document
+---
+
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(stringr)
+library(tidyverse)
+library(ggplot2)
+library(GGally)
+library(readr)
+library(corrplot)
+library(ggcorrplot)
+library(glmnet)
+library(tree)
+require(randomForest)
+library(gbm)
+library(pls)
+library(ggplot2)
+```
+
+```{r}
+red_wine_quality<-read.csv("C:\\Users\\alish\\Downloads\\M.S. Data Science\\winequality-red.csv")
+```
+
+```{r}
+#check number of rows and columns
+dim(red_wine_quality)
+
+# Check for any missing values in the entire data frame
+has_na <- any(is.na(red_wine_quality))
+
+print(has_na)
+
+```
+```{r}
+summary(red_wine_quality)
+```
+```{r}
+#scatter plot matrix of variables in red wine quality data set
+pairs(red_wine_quality)
+```
+```{r}
+ggplot(red_wine_quality, aes(x = quality)) +
+  geom_bar(fill = "skyblue", color = "black") +
+  labs(title = "Distribution of Wine Quality", x = "Quality", y = "Count")
+
+```
+
+```{r}
+#class counts
+class_counts <- table(red_wine_quality$quality)
+print(class_counts)
+```
+
+
+```{r}
+boxplot(total.sulfur.dioxide ~ quality, data = red_wine_quality, xlab = "Quality", ylab = "Total Sulfur Dioxide",
+        main = "Side-by-Side Boxplot of Quality vs Total Sulfur Dioxide")
+```
+
+```{r}
+quantitative_vars <- c("density", "pH", "sulphates", "alcohol")
+par(mfrow = c(2, 2))
+
+for (var in quantitative_vars) {
+  hist(red_wine_quality[[var]], main = var, xlab = var, col = "skyblue", breaks = 20)
+}
+par(mfrow = c(1, 1))
+```
+
+```{r}
+plot(alcohol ~ sulphates, data = red_wine_quality, xlab = "sulphates", ylab = "alcohol",
+        main = "alcohol by sulphates")
+
+```
+```{r}
+
+plot(density ~ pH, data = red_wine_quality, xlab = "pH", ylab = "density",
+        main = "density by pH")
+```
+
+
+
+```{r}
+#computed matrix of correlation of variables
+cor(red_wine_quality)
+```
+#quality and alcohol have the highest correlation (in relation to quality)
+
+
+```{r}
+cor_matrix <- cor(red_wine_quality)
+
+
+# Create a square correlation plot
+ggcorrplot(cor_matrix, type="full", outline.col = "white", lab_size = 3)
+
+```
+#This plot is a visual representation of the correlation matrix. Each square in the plot represents the correlation between two variables, with color intensity indicating the strength and direction of the correlation. Positive correlations arerepresented in shades of red, while negative correlations are represented in shades of blue.The size and intensity of the squares provide a visual summary of the relationships between variables in the dataset.
+
+```{r}
+#linear regression model to predict the quality of red wine based on all available variables in the "red_wine_quality" data set
+
+red.lm.model1 <- lm(quality ~ ., data = red_wine_quality)
+summary(red.lm.model1)
+
+```
+#linear regression model: the algorithm used the least squares method to find the coefficients that minimize the sum of squared differences between the actual and predicted values of the dependent variable (wine quality). This method is widely used for its simplicity and mathematical tractability. The results obtained, including coefficient estimates, standard errors, t-values, and p-values, are based on the least squares approach.
+
+#This linear regression model attempts to predict the quality of red wine based on various chemical attributes. The coefficients provide insights into the direction and strength of the relationships between predictor variables and the response variable. The p-values help assess the statistical significance of these relationships.
+
+#The significant variables (based on a commonly used significance level of 0.05) are Volatile Acidity, Chlorides, Free Sulfur Dioxide, Total Sulfur Dioxide, pH, Sulphates, and Alcohol. These are the variables that have a statistically significant impact on the predicted quality of red wine in this model.
+
+#The model considers variables such as volatile acidity, chlorides, sulphates, and alcohol. The coefficients for these variables indicate their impact on wine quality. For instance, higher volatile acidity and chlorides are associated with lower quality, while higher sulphates and alcohol content are linked to higher quality. The model overall is statistically significant (p-value < 2.2e-16), explaining approximately 36.06% of the variability in wine quality. The residuals, representing the differences between observed and predicted values, have a standard deviation of 0.648. These results offer insights into the chemical factors influencing red wine quality, providing a valuable tool for understanding and potentially improving wine production.The overall model is statistically significant, but the individual predictors vary in their impact on the quality of red wine.
+
+#Interpertation of coefficients showing how each of these chemical attributes effects the quality of red wine. 
+#Volatile Acidity (Coefficient: -1.084)
+#For each one-unit increase in volatile acidity, the model predicts a decrease of approximately 1.084 units in the quality of red wine.
+#Higher levels of volatile acidity are associated with lower quality wine.
+
+#Chlorides (Coefficient: -1.874)
+#Higher levels of chlorides are associated with lower quality wine.
+
+#Free Sulfur Dioxide (Coefficient: 0.004361)
+#Higher levels of free sulfur dioxide are associated with higher quality wine.
+
+#Total Sulfur Dioxide (Coefficient: -0.003265)
+#Higher levels of total sulfur dioxide are associated with lower quality wine.
+
+#pH (Coefficient: -0.4137)
+#Higher pH levels are associated with lower quality wine.
+
+#Sulphates (Coefficient: 0.9163)
+#Higher levels of sulphates are associated with higher quality wine.
+
+#Alcohol (Coefficient: 0.2762)
+#Higher alcohol content is associated with higher quality wine.
+
+#The results of the linear regression analysis on the red wine quality data set provide compelling evidence to reject the null hypothesis for the examined variables. The null hypothesis posits that the coefficients of the predictor variables are equal to zero, implying no significant impact on the response variable (quality). However, the calculated p-values for each variable are well below the commonly accepted threshold of 0.05, indicating that these predictors are indeed statistically significant in influencing wine quality. Therefore, we can confidently reject the null hypothesis and assert that there is a meaningful relationship between volatile acidity, chlorides, free sulfur dioxide, total sulfur dioxide, pH, sulphates, alcohol, and the perceived quality of red wines in this dataset.
+
+```{r}
+par(mfrow = c(2, 2))
+plot(red.lm.model1)
+```
+
+```{r}
+#linear regression model to predict the quality of red wine based on only significant variables in the "red_wine_quality" data set
+
+red.lm.model_significant <- lm(quality ~ volatile.acidity + chlorides + free.sulfur.dioxide + 
+                                total.sulfur.dioxide + pH + sulphates + alcohol,
+                                data = red_wine_quality)
+
+summary(red.lm.model_significant)
+
+```
+
+```{r}
+#linear regression model to predict the quality of red wine based on significant variables that are positivly correlated variables in the "red_wine_quality" data set
+
+red.lm.model_significant_pos_cor <- lm(quality ~ volatile.acidity + chlorides + free.sulfur.dioxide + 
+                                total.sulfur.dioxide + pH,
+                                data = red_wine_quality)
+
+summary(red.lm.model_significant_pos_cor)
+
+```
+
+
+#comparing results from linear regression model with all variables to the model with only significant variables and model with significant and positivly correlated variables.
+
+#All variables
+#Residual standard error: 0.648 on 1587 degrees of freedom
+#Multiple R-squared:  0.3606,	Adjusted R-squared:  0.3561 
+#F-statistic: 81.35 on 11 and 1587 DF,  p-value: < 2.2e-16
+
+#Significant variables
+#Residual standard error: 0.6477 on 1591 degrees of freedom
+#Multiple R-squared:  0.3595,	Adjusted R-squared:  0.3567 
+#F-statistic: 127.6 on 7 and 1591 DF,  p-value: < 2.2e-16
+
+#Significant positive correlated
+#Residual standard error: 0.7275 on 1593 degrees of freedom
+#Multiple R-squared:  0.1909,	Adjusted R-squared:  0.1884 
+#F-statistic: 75.18 on 5 and 1593 DF,  p-value: < 2.2e-16
+
+#Residual Standard Error: Both models have similar residual standard errors, indicating that they perform similarly in terms of predicting the response variable (quality).
+
+#Multiple R-squared and Adjusted R-squared:The values are very close between the two models, suggesting that the model with only significant variables explains a similar proportion of the variability in the response variable as the model with all variables.
+
+#F-statistic:The F-statistic in the model with only significant variables is higher, indicating a better fit to the data. This is expected since the model is more parsimonious, focusing on the most important variables.
+
+#Degrees of Freedom:The model with all variables has more degrees of freedom due to the additional variables included.
+
+#Overall, the model with only significant variables performs comparably in terms of explaining the variability in the quality of red wine, while being more concise and interpretable. This suggests that the selected significant variables capture the essential information for predicting wine quality in this dataset.
+
+#Comparing the model with significant positively correlated values to the model with all variables and just significant values which has the same p-value as the additional models. However this model was not beneficial as it has a significantly lower F-Statistic and a lower r squared indicating a worse fit.
+
+#Considering the specific goals of your analysis, the nature of your data, and the trade-off between model complexity and performance when deciding on the "best" model the best model is the model with just significant values. Additional validation or cross-validation can provide insights into the model's generalization performance.
+
+```{r}
+par(mfrow = c(2, 2))
+plot(red.lm.model_significant)
+```
+
+```{r}
+confint(red.lm.model_significant)
+```
+#The 95% confidence intervals for the coefficients of the significant variables in the linear regression model help quantify the uncertainty associated with the estimated coefficients, providing a range of plausible values for each variable's effect on wine quality.
+
+#Intercept:The 95% confidence interval for the intercept is approximately (3.64,5.22). This means we are 95% confident that the true average quality of wine, when all predictor variables are zero, falls within this range.
+
+#volatile.acidity:The 95% confidence interval for the coefficient of volatile acidity is approximately (−1.21,−0.81) This implies that we are 95% confident that the true effect of volatile acidity on wine quality falls within this range.
+
+#chlorides:The 95% confidence interval for the coefficient of chlorides is approximately (−2.80,−1.24). We are 95% confident that the true effect of chlorides on wine quality falls within this range.
+
+#free.sulfur.dioxide:The 95% confidence interval for the coefficient of free sulfur dioxide is approximately (0.0009,0.0092). This suggests that we are 95% confident that the true effect of free sulfur dioxide on wine quality falls within this range.
+
+#total.sulfur.dioxide:The 95% confidence interval for the coefficient of total sulfur dioxide is approximately (−0.0048,−0.0021). We are 95% confident that the true effect of total sulfur dioxide on wine quality falls within this range.
+
+#pH:The 95% confidence interval for the coefficient of pH is approximately (−0.71,−0.25). This indicates that we are 95% confident that the true effect of pH on wine quality falls within this range.
+
+#sulphates:The 95% confidence interval for the coefficient of sulphates is approximately (0.67,1.10). We are 95% confident that the true effect of sulphates on wine quality falls within this range.
+
+#alcohol:The 95% confidence interval for the coefficient of alcohol is approximately (0.26,0.32). This suggests that we are 95% confident that the true effect of alcohol content on wine quality falls within this range.
+
+
+
+
+```{r}
+
+#Split data into test and train
+sample_split <- function(dataset, split_ratio, seed = NULL) {
+  set.seed(seed)
+  
+  train_subset <- sample(nrow(dataset) * split_ratio)
+  
+  return(list(
+    train = dataset[train_subset, ],
+    test = dataset[-train_subset, ]
+  ))
+}
+
+red_wine_quality_split <- sample_split(red_wine_quality, 0.5, seed = 123)
+```
+
+
+
+```{r}
+#linear model using least squares on the training set
+
+
+ls_model<-lm(quality ~ volatile.acidity + chlorides + free.sulfur.dioxide + 
+                                total.sulfur.dioxide + pH + sulphates + alcohol,
+                                data = red_wine_quality_split$train)
+
+ls_predictions <- predict(ls_model, red_wine_quality_split$test)
+head(ls_predictions)
+```
+
+```{r}
+calc_rmse <- function(y, y_hat) {
+  return(sqrt(mean((y - y_hat)^2)))
+}
+```
+
+```{r}
+ls_rmse <- calc_rmse(red_wine_quality_split$test$quality, ls_predictions)
+print(ls_rmse)
+```
+
+```{r}
+
+train_matrix <- model.matrix(quality ~ volatile.acidity + chlorides + free.sulfur.dioxide +
+                            total.sulfur.dioxide + pH + sulphates + alcohol, data = red_wine_quality_split$train)
+
+test_matrix <- model.matrix(quality ~ volatile.acidity + chlorides + free.sulfur.dioxide +
+                            total.sulfur.dioxide + pH + sulphates + alcohol, data = red_wine_quality_split$test)
+
+grid <- 10 ^ seq(4, -2, length = 100)
+
+
+
+
+ridge_model <- cv.glmnet(train_matrix, red_wine_quality_split$train$quality, alpha = 0, lambda = grid, thresh = 1e-12)
+
+ridge_predictions <- predict(ridge_model, test_matrix, s = ridge_model$lambda.min)
+
+ridge_rmse <- calc_rmse(red_wine_quality_split$test$quality, ridge_predictions)
+print(ridge_rmse)
+```
+```{r}
+#cross validated error to choose the optimal lambda
+plot(ridge_model)
+```
+
+
+#This plot shows how the coefficients are affected by the regularization. As lambda increases, the penalty on large coefficients becomes more substantial, leading to a greater shrinkage of the coefficients. The variables with steeper lines are more sensitive to changes in lambda.
+
+
+#Method Ridge regression-Use the entire dataset to split into training and testing sets. This ensures that both subsets have instances from the entire range of your data, including the significant predictors. Then, created model matrices for training and testing data using the significant predictors.This ensures that the model is trained and tested on the same set of features.
+
+#We wre using the RRMSE to evaluate-The RMSE is a measure of the model's accuracy, indicating how well the model's predictions align with the actual values in the test set. The lower the RMSE, the better the model's predictive performance.
+
+
+```{r}
+# Train Ridge Regression Model with Optimal Lambda
+final_ridge_model <- glmnet(train_matrix, red_wine_quality_split$train$quality, alpha = 0, lambda = 7)
+
+
+final_ridge_predictions <- predict(final_ridge_model, newx = test_matrix)
+
+
+final_ridge_rmse <- calc_rmse(red_wine_quality_split$test$quality, final_ridge_predictions)
+print(final_ridge_rmse)
+
+```
+
+
+```{r}
+lasso_model <- cv.glmnet(train_matrix, red_wine_quality_split$train$quality, alpha = 1, lambda = grid, thresh = 1e-12)
+
+lasso_predictions <- predict(lasso_model, test_matrix, s = lasso_model$lambda.min)
+
+lasso_rmse <- calc_rmse(red_wine_quality_split$test$quality, lasso_predictions)
+print(lasso_rmse)
+```
+
+```{r}
+predict(lasso_model, s = lasso_model$lambda.min, type = "coefficients")
+```
+
+#In the Lasso regression model results provided, the coefficients offer valuable insights into the relationships between predictor variables and the dependent variable, taking into account the regularization effect of the Lasso algorithm. The intercept term, representing the expected value of the dependent variable when all predictors are zero, remains present but may be influenced by Lasso's tendency to shrink some coefficients to zero for variable selection. The second intercept with a value of "." suggests that the intercept might not be as relevant in this specific Lasso model. Notably, variables like "volatile.acidity," "chlorides," "pH," "sulphates," and "alcohol" have non-zero coefficients, indicating that Lasso has retained them in the model as relevant predictors. The negative coefficients for "volatile.acidity," "chlorides," and "pH" suggest negative impacts on the dependent variable, while the positive coefficients for "sulphates" and "alcohol" indicate positive impacts. The smaller magnitudes of some coefficients, such as for "free.sulfur.dioxide" and "total.sulfur.dioxide," imply reduced impacts, potentially even to the point of insignificance. In summary, these results showcase the Lasso model's capacity for variable selection, effectively shrinking some coefficients while retaining others based on their relevance and impact on the dependent variable.
+
+```{r}
+plot(lasso_model)
+```
+#lasso optimal number of variables is 2
+
+```{r}
+# Assuming `grid` contains the values used for lambda in your cross-validation
+best_lasso_lambda <- 2
+
+lasso_model <- cv.glmnet(train_matrix, red_wine_quality_split$train$quality, alpha = 1, lambda = grid, thresh = 1e-12)
+lasso_final_model <- glmnet(train_matrix, red_wine_quality_split$train$quality, alpha = 1, lambda = best_lasso_lambda)
+
+lasso_predictions <- predict(lasso_final_model, newx = test_matrix)
+
+lasso_rmse <- calc_rmse(red_wine_quality_split$test$quality, lasso_predictions)
+print(lasso_rmse)
+
+```
+
+
+
+
+
+```{r}
+pcr_model <- pcr(quality ~ ., data=red_wine_quality_split$train, scale = TRUE, validation = "CV")
+
+validationplot(pcr_model, val.type = "MSEP")
+```
+
+```{r}
+summary(pcr_model)
+```
+
+
+```{r}
+pcr_predictions <- predict(pcr_model, red_wine_quality_split$test, ncomp = 7)
+
+pcr_rmse <- calc_rmse(red_wine_quality_split$test$quality, pcr_predictions)
+print(pcr_rmse)
+```
+```{r}
+
+pls_model <- plsr(quality ~ ., data = red_wine_quality_split$train, scale = TRUE, validation = "CV")
+
+validationplot(pls_model, val.type = "MSEP")
+```
+
+```{r}
+pls_predictions <- predict(pls_model, red_wine_quality_split$test, ncomp = 10)
+
+pls_rmse <- calc_rmse(red_wine_quality_split$test$quality, pls_predictions)
+print(pls_rmse)
+```
+
+```{r}
+calc_r2 <- function(y, y_hat) {
+  y_bar <- mean(y)
+  rss <- sum((y - y_hat)^2)
+  tss <- sum((y - y_bar)^2)
+  return(1 - (rss / tss))
+}
+```
+
+```{r}
+
+ols_r2 <- calc_r2(red_wine_quality_split$test$quality, ls_predictions)
+ridge_r2 <- calc_r2(red_wine_quality_split$test$quality, ridge_predictions)
+lasso_r2 <- calc_r2(red_wine_quality_split$test$quality, lasso_predictions)
+pcr_r2 <- calc_r2(red_wine_quality_split$test$quality, pcr_predictions)
+pls_r2 <- calc_r2(red_wine_quality_split$test$quality, pls_predictions)
+
+barplot(c(ols_r2, ridge_r2, lasso_r2, pcr_r2, pls_r2),
+        names.arg = c("OLS", "Ridge", "Lasso", "PCR", "PLS"))
+```
+
+```{r}
+barplot(c(ls_rmse, ridge_rmse, lasso_rmse, pcr_rmse, pls_rmse),
+        names.arg = c("OLS", "Ridge", "Lasso", "PCR", "PLS"))
+```
+
+
+
+
+
+```{r}
+#
+#A regression tree fit on the training data. I will also ouput the tree plot and the test MSE. The tree regression model is trying to predict sales explained by all the other variables in the data set.
+
+red.tree <- tree(quality ~ . , data = red_wine_quality_split$train)
+summary(red.tree)
+```
+#The regression tree, with its 14 terminal nodes, effectively captures the patterns in the red wine quality dataset. The residuals, with a mean close to zero, suggest that the model is making predictions that are, on average, unbiased. The distribution of residuals shows that the model tends to have errors within a reasonable range, providing a nuanced understanding of its predictive performance across different quality levels.
+
+#The regression tree usees 7 predictor variables to make predictions about the "quality" outcome.The tree has 14 terminal nodes, suggesting that it divides the dataset into nine distinct groups based on the predictor variables.The low residual mean deviance .3317 indicates a good fit of the model to the training data.
+
+
+```{r}
+plot(red.tree)
+text(red.tree, pretty=0)
+```
+
+```{r}
+yhat <- predict(red.tree, newdata = red_wine_quality_split$test)
+full_mse<-mean((yhat - red_wine_quality_split$test$quality)^2)
+print(full_mse)
+```
+
+#Now I will do a tree model using cross validation. This is done in order to determine if pruning the tree helps.
+
+```{r}
+cv.red <- cv.tree(red.tree)
+
+plot(cv.red$size, cv.red$dev, type='b', main='No. of trees vs plot performance', xlab='Number of Trees', ylab='Deviance')
+
+```
+#tough to determine exactly the best number of tree nodes. Levels out around 4. 
+
+```{r}
+prune.red <- prune.tree(red.tree, best=4)
+plot(prune.red)
+text(prune.red, pretty=0)
+```
+```{r}
+yhat <- predict(prune.red, red_wine_quality_split$test)
+prune_mse<-mean((yhat-red_wine_quality_split$test$quality)^2)
+print(prune_mse)
+```
+
+#regression tree
+
+#method/results
+#In this analysis, a regression tree model was constructed using the red wine quality dataset, where the quality of red wine is predicted based on various chemical characteristics. The initial tree, red.tree, was built using variables such as alcohol content, total sulfur dioxide, sulphates, fixed acidity, volatile acidity, density, and residual sugar. The tree had 14 terminal nodes, and its structure was summarized, revealing a residual mean deviance of 0.3317. Subsequent predictions were made on a separate test set, and the mean squared error was calculated, resulting in a value of 0.5275, indicating the average squared difference between predicted and actual values.To further optimize the model, cross-validation was employed to explore the relationship between the number of trees and deviance. The plot of deviance against the number of trees provided insights into the trade-off between model complexity and performance. Pruning, a technique to simplify the tree and prevent overfitting, was then applied based on the optimal tree size identified during cross-validation. The pruned tree, prune.red, was visualized, and terminal nodes were labeled for better interpretability. Predictions were made using the pruned tree on the same test set, yielding a mean squared error of 0.561. The process of cross-validation and pruning aims to enhance the model's generalization to new data by finding an optimal level of complexity. The choice between the original and pruned tree depends on the specific requirements of the analysis, balancing model simplicity and predictive performance. This comprehensive approach ensures a robust evaluation of the regression tree model in predicting red wine quality.
+
+#interpertation
+#Alcohol content, total sulfur dioxide, sulphates, fixed acidity, volatile acidity, density, and residual sugar play crucial roles in determining the quality of red wine.Model Performance:The initial tree, (red.tree) demonstrated good predictive performance on the test set, as indicated by a mean squared error of 0.5275. This suggests that the model captures the relationships between the selected features and wine quality reasonably well.For cross-validation the plot of deviance against the number of trees helped identify an optimal tree size, facilitating a balance between model complexity and predictive accuracy.However, the pruned tree, (prune.red) represents a more generalized version that may avoid overfitting to the training data. The mean squared error increased slightly after pruning (0.6175), reflecting a trade-off between model complexity and performance.#This comparison suggests that pruning the decision tree to 4 nodes has led to an increase in the Test MSE compared to the unpruned tree. In other words, the unpruned tree is performing better on the test dataset in terms of Mean Squared Error. While the pruned tree is simpler and less prone to overfitting, it may sacrifice a small amount of predictive accuracy compared to the original, more complex tree.
+
+
+
+```{r}
+#bagging
+
+bag10.red <- randomForest(quality ~., data = red_wine_quality_split$train, mtry=10, importance=TRUE)
+
+```
+
+```{r}
+yhat.bag <- predict(bag10.red, red_wine_quality_split$test)
+bag_mse<-mean((yhat.bag-red_wine_quality_split$test$quality)^2)
+print(bag_mse)
+
+```
+
+
+##Bagging has decresed the error to .439 providing a more improved model(from:.527 of unpruned and .561 pruned)
+
+#This analysis indicates that the bagging model with 10 randomly selected predictors at each split performs well on the test set, as evidenced by the relatively low mean squared error. Bagging, by aggregating predictions from multiple trees trained on bootstrapped samples, tends to enhance model robustness and mitigate overfitting, contributing to improved predictive accuracy.
+
+
+
+```{r}
+importance(bag10.red)
+```
+
+```{r}
+varImpPlot(bag10.red)
+```
+
+##After looking at the variables we can see that the most important variable is alcohol followed by sulpfates, total.sulfur.dioxide and volatile.acidity. 
+
+
+
+
+
+```{r}
+#boosting
+
+boost.red <- gbm(quality ~., data = red_wine_quality_split$train, distribution = "gaussian", n.trees = 1000, shrinkage = 0.01)
+
+predictions <- predict(boost.red, newdata = red_wine_quality_split$test, n.trees = 1000)
+
+# Calculate Mean Squared Error
+boost_mse <- mean((predictions - red_wine_quality_split$test$quality)^2)
+print(boost_mse)
+
+
+```
+```{r}
+
+# Assuming full_mse, prune_mse, bag_mse, and boost_mse are defined
+barplot(c(full_mse, prune_mse, bag_mse, boost_mse),
+        names.arg = c("Pruned", "Full Tree", "Bagging", "Boosting"),
+        main = "Comparison of MSE for Different Models")
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

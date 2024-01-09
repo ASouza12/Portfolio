@@ -1,0 +1,369 @@
+---
+title: "Predictive Modeling Final-Qualitative"
+author: "Alisha Souza"
+date: "2023-12-11"
+output: word_document
+---
+
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(stringr)
+library(tidyverse)
+library(ggplot2)
+library(GGally)
+library(readr)
+library(corrplot)
+library(ggcorrplot)
+library(glmnet)
+library(tree)
+require(randomForest)
+library(gbm)
+library(pls)
+```
+
+```{r}
+diabetes_data<-read.csv("C:\\Users\\alish\\Downloads\\M.S. Data Science\\diabetes_data.csv")
+```
+
+```{r}
+diabetes<-diabetes_data
+
+#check number of rows and columns
+dim(diabetes)
+
+# Check for any missing values in the entire data frame
+has_na <- any(is.na(diabetes))
+
+print(has_na)
+
+```
+
+```{r}
+summary(diabetes)
+```
+
+```{r}
+# Rename the column 
+colnames(diabetes)[colnames(diabetes) == "Diabetes_binary"] <- "Has_Diabetes"
+
+#0=no diabetes, 1=yes diabetes, also chance to factor
+diabetes <- diabetes %>%
+  mutate(Has_Diabetes = factor(Has_Diabetes, 
+                               levels = c(0, 1),
+                               labels = c('No', 'Yes')))
+
+```
+
+```{r}
+pairs(diabetes)
+```
+
+
+```{r}
+corrplot(cor(diabetes_data), method="square")
+```
+
+```{r}
+
+plot(HighBP +HighChol ~ Has_Diabetes, data = diabetes, xlab = "diabetes", ylab = "High BP",
+        main = "Side-by-Side Boxplot of has diabetes vs High BP and High Chol")
+```
+```{r}
+
+qual_vars <- c( "BMI", "GenHlth", "MentHlth", "PhysHlth", "Age", "Education","Income")
+par(mfrow = c(3,3))
+
+for (var in qual_vars) {
+  hist(diabetes[[var]], main = var, xlab = var, col = "skyblue", breaks = 20)
+}
+par(mfrow = c(1, 1))
+```
+```{r}
+#computed matrix of correlation of variables
+cor(diabetes_data)
+```
+
+```{r}
+cor_matrix1 <- cor(diabetes_data)
+
+
+# Create a square correlation plot
+ggcorrplot(cor_matrix1, type="full", outline.col = "white", lab_size = 3)
+
+```
+
+
+```{r}
+#logistic regression with diabetes as the response and all variables as predictors.
+set.seed(123)
+diabetes.fit1<-glm(Has_Diabetes~., data=diabetes,family=binomial)
+summary(diabetes.fit1)
+
+```
+
+#Deviance residuals measure how well the model fits the data. Results showed the values are extremely close to zero, indicating a very good fit. The residuals are at the scale of 10-6, which suggests that the model fits the data very well.
+
+#The estimated coefficients for the estimates are very close to zero, and the standard errors are very large. This might indicate a problem with the model fitting process, leading to unreliable coefficient estimates.
+  
+```{r}
+logdiabetes.prob1 <- predict(diabetes.fit1, type='response')
+logdiabetes.pred1 <- rep("No", length(logdiabetes.prob1))
+logdiabetes.pred1[logdiabetes.prob1 > 0.5] <- "Yes"
+table(logdiabetes.pred1, diabetes$Has_Diabetes)
+mean(logdiabetes.pred1 == diabetes$Has_Diabetes)
+
+```
+##accuracy (9599+8211/70692)=0.2519
+
+```{r}
+set.seed(123)
+diabetes.fit2<-glm(Has_Diabetes~HighBP+HighChol+CholCheck+BMI+Stroke+HeartDiseaseorAttack+HvyAlcoholConsump+GenHlth+MentHlth+PhysHlth+DiffWalk+Sex+Age+Education+Income, data=diabetes,family=binomial)
+summary(diabetes.fit2)
+```
+
+```{r}
+logdiabetes.prob2 <- predict(diabetes.fit2, type='response')
+logdiabetes.pred2 <- rep("No", length(logdiabetes.prob2))
+logdiabetes.pred2[logdiabetes.prob2 > 0.5] <- "Yes"
+table(logdiabetes.pred2, diabetes$Has_Diabetes)
+mean(logdiabetes.pred2 == diabetes$Has_Diabetes)
+```
+#accuracy (9611+8203/70692)=.2519
+
+```{r}
+
+set.seed(123)
+diabetes.fit3<-glm(Has_Diabetes~HighBP+HighChol+CholCheck+BMI+Stroke+HeartDiseaseorAttack+HvyAlcoholConsump+DiffWalk+Sex+Age+Education+Income, data=diabetes,family=binomial)
+summary(diabetes.fit3)
+```
+
+```{r}
+logdiabetes.prob3 <- predict(diabetes.fit3, type='response')
+logdiabetes.pred3 <- rep("No", length(logdiabetes.prob3))
+logdiabetes.pred3[logdiabetes.prob3 > 0.5] <- "Yes"
+table(logdiabetes.pred3, diabetes$Has_Diabetes)
+mean(logdiabetes.pred3 == diabetes$Has_Diabetes)
+```
+
+#accuracy (10022+8715/70692)=.2650
+
+```{r}
+#10 predictors
+set.seed(123)
+diabetes.fit4<-glm(Has_Diabetes~HighBP+HighChol+CholCheck+BMI+HeartDiseaseorAttack+HvyAlcoholConsump+DiffWalk+Sex+Age+Income, data=diabetes,family=binomial)
+summary(diabetes.fit4)
+```
+
+```{r}
+logdiabetes.prob4 <- predict(diabetes.fit4, type='response')
+logdiabetes.pred4 <- rep("No", length(logdiabetes.prob3))
+logdiabetes.pred4[logdiabetes.prob4 > 0.5] <- "Yes"
+table(logdiabetes.pred4, diabetes$Has_Diabetes)
+mean(logdiabetes.pred4 == diabetes$Has_Diabetes)
+```
+#accuracy (10077+8723/70692)=.2659
+
+
+
+
+
+
+
+
+
+
+```{r}
+set.seed(123)
+sample_index <- sample(1:nrow(diabetes_data), 0.7 * nrow(diabetes_data))
+train_data <- diabetes_data[sample_index, ]
+test_data <- diabetes_data[-sample_index, ]
+```
+
+```{r}
+diabetes_logistic_model <- glm(Diabetes_binary ~HighBP+HighChol+CholCheck+BMI+HeartDiseaseorAttack+HvyAlcoholConsump+DiffWalk+Sex+Age+Income, data = train_data, family = binomial)
+summary(diabetes_logistic_model)
+```
+
+```{r}
+
+diabetes_logistic_model <- glm(Diabetes_binary ~HighBP + HighChol + Age, data = train_data, family = binomial)
+logistic_probabilities <- predict(diabetes_logistic_model, newdata = test_data, type = "response")
+logistic_predictions <- ifelse(logistic_probabilities > 0.5, 1, 0)
+
+table(logistic_predictions, test_data$Diabetes_binary)
+mean(logistic_predictions == test_data$Diabetes_binary)
+```
+##error rate (3607+2840/21208)=0.3040
+
+```{r}
+set.seed(123)
+lda_model <- lda(Diabetes_binary~HighBP+HighChol+CholCheck+BMI+HeartDiseaseorAttack+HvyAlcoholConsump+DiffWalk+Sex+Age+Income, data = train_data)
+
+# Predictions on the test data
+lda_pred <- predict(lda_model, newdata = test_data)$class
+
+# Create a contingency table
+confusion_table <- table(lda_pred, test_data$Diabetes_binary)
+print(confusion_table)
+mean(lda_pred== test_data$Diabetes_binary)
+```
+##accuracy (3125+2526/21208)=0.2664
+
+```{r}
+set.seed(123)
+naive_bayes_model <- naiveBayes(Diabetes_binary~HighBP+HighChol+CholCheck+BMI+HeartDiseaseorAttack+HvyAlcoholConsump+DiffWalk+Sex+Age+Income, data = train_data)
+naive_bayes_pred <- predict(naive_bayes_model, test_data)
+naive_bayes_class <- as.factor(naive_bayes_pred)
+table(naive_bayes_class, test_data$Diabetes_binary)
+mean(naive_bayes_class== test_data$Diabetes_binary)
+```
+##accuracy (3898+1926/21208)=0.2746
+
+
+```{r}
+set.seed(123)
+qda_model <- qda(Diabetes_binary~HighBP+HighChol+CholCheck+BMI+HeartDiseaseorAttack+HvyAlcoholConsump+DiffWalk+Sex+Age+Income, data = train_data)
+
+# Predictions on the test data
+qda_pred <- predict(qda_model, newdata = test_data)$class
+
+# Create a contingency table
+confusion_table <- table(qda_pred, test_data$Diabetes_binary)
+print(confusion_table)
+mean(qda_pred== test_data$Diabetes_binary)
+```
+##accuracy (4708+1361/21208)=0.2861
+
+
+
+
+
+
+
+
+
+
+```{r}
+
+library(class)
+Week.train=as.matrix(Lag2[train])
+Week.test=as.matrix(Lag2[!train])
+train.Direction =Direction[train]
+
+set.seed(1)
+Weekknn.pred=knn(Week.train,Week.test,train.Direction,k=1)
+table(Weekknn.pred,Direction.0910)
+```
+
+
+
+
+```{r}
+library(class)
+
+set.seed(123)
+predictors <- c("HighBP", "HighChol", "CholCheck", "BMI", "HeartDiseaseorAttack", "HvyAlcoholConsump", "DiffWalk", "Sex", "Age", "Income")
+
+knn_model <- knn(train_data[, predictors], test_data[, predictors], train_data$Diabetes_binary, k = 5)
+
+
+confusion_table_knn <- table(knn_model, test_data$Diabetes_binary)
+print(confusion_table_knn)
+
+
+accuracy_knn <- mean(knn_model == test_data$Diabetes_binary)
+print(paste("Accuracy for kNN:", accuracy_knn))
+
+```
+##error rate (3362+2668/21208)=0.2843
+
+
+```{r}
+# Load required libraries
+library(class)
+library(caret)
+
+# Set seed for reproducibility
+set.seed(123)
+
+# Specify predictor variables
+predictors <- c("HighBP", "HighChol", "CholCheck", "BMI", "HeartDiseaseorAttack", "HvyAlcoholConsump", "DiffWalk", "Sex", "Age", "Income")
+
+# Combine predictors and response variable
+data <- cbind(train_data[, predictors], train_data$Diabetes_binary)
+
+# Define the control parameters for cross-validation
+ctrl <- trainControl(method = "cv",    # "cv" for k-fold cross-validation
+                     number = 10,      # Number of folds
+                     summaryFunction = twoClassSummary,  # Evaluation metric (for binary classification)
+                     classProbs = TRUE,  # Include class probabilities
+                     savePredictions = TRUE)  # Save predictions for later analysis
+
+# Train the kNN model using cross-validation
+knn_model_cv <- train(Diabetes_binary ~ .,
+                      data = data,
+                      method = "knn",
+                      trControl = ctrl,
+                      preProcess = c("center", "scale"),  # Optional: standardize predictors
+                      tuneGrid = expand.grid(k = c(1, 3, 5, 7)))  # Specify k values to try
+
+# Print the cross-validated results
+print(knn_model_cv)
+
+# Access additional information, e.g., confusion matrix
+confusion_matrix <- confusionMatrix(predict(knn_model_cv, newdata = test_data[, predictors]), test_data$Diabetes_binary)
+print(confusion_matrix)
+
+```
+```{r}
+# Load required libraries
+library(class)
+library(caret)
+
+# Set seed for reproducibility
+set.seed(123)
+
+# Specify predictor variables
+predictors <- c("HighBP", "HighChol", "CholCheck", "BMI", "HeartDiseaseorAttack", "HvyAlcoholConsump", "DiffWalk", "Sex", "Age", "Income")
+
+# Combine predictors and response variable in the training dataset
+train_data_combined <- train_data[, c(predictors, "Diabetes_binary")]
+train_data_combined$Diabetes_binary <- as.factor(train_data_combined$Diabetes_binary)
+
+# Ensure valid variable names for class levels
+levels(train_data_combined$Diabetes_binary) <- make.names(levels(train_data_combined$Diabetes_binary))
+
+# Define the control parameters for cross-validation
+ctrl <- trainControl(method = "cv",    # "cv" for k-fold cross-validation
+                     number = 10,      # Number of folds
+                     summaryFunction = twoClassSummary,  # Evaluation metric (for binary classification)
+                     classProbs = TRUE,  # Include class probabilities
+                     savePredictions = TRUE)  # Save predictions for later analysis
+
+# Train the kNN model using cross-validation
+knn_model_cv <- train(Diabetes_binary ~ .,
+                      data = train_data_combined,
+                      method = "knn",
+                      trControl = ctrl,
+                      preProcess = c("center", "scale"),  # Optional: standardize predictors
+                      tuneGrid = expand.grid(k = c(1, 3, 5, 7)))  # Specify k values to try
+
+```
+```{r}
+
+# Print the cross-validated results
+print(knn_model_cv)
+
+# Make predictions on the test set
+test_predictions <- as.factor(predict(knn_model_cv, newdata = test_data[, predictors]))
+
+# Access additional information, e.g., confusion matrix
+confusion_matrix <- confusionMatrix(test_predictions, as.factor(test_data$Diabetes_binary))
+print(confusion_matrix)
+```
+
+
+
+
