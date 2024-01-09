@@ -1,0 +1,106 @@
+---
+title: "MID TERM R PROJECT"
+output: Alisha Souza
+date: "2023-04-10"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(dplyr)
+library(tidyr) 
+library(ggplot2)
+library(readr)
+library(scales)
+
+sales<-read.csv("C:\Users\alish\OneDrive\Documents\MS Data Science\r project data.csv")   
+```
+
+```{r}
+job_title_salaries<-r_project_data%>%                  
+  filter(job_title=='Data Scientist'& employment_type=='FT')
+
+job_title_salaries$experience_level<-
+  recode(job_title_salaries$experience_level, 
+                                EN='Entry levels',
+                                MI='Mid Level',
+                                SE='Senior Level',
+                                EX='Executive Level')
+
+job_title_salaries<-job_title_salaries%>%
+mutate(us_residence=ifelse(employee_residence=="US","in US","out of US"))
+                                
+
+```
+
+```{r}
+ggplot(r_project_data,aes(x=job_title,y=salary_in_usd))+     
+  geom_col()+
+  labs(x='job title',
+       y='annual salary',
+       title='Data Science Team Positions and their Salaries')
+
+```
+```{r}
+ggplot(job_title_salaries,aes(x=experience_level,y=salary_in_usd))+     #ggplot of salaries and job titles. Unsure how to make the y axis make sense, chance EN to entry level etc? 
+  geom_boxplot(color="blue",fill="light blue")+
+  labs(x='Experience Level',
+       y='Annual Salary in USD',
+       title='Data Scientist Experience Levels and their Salaries')+
+    scale_y_continuous(limit=c(0,450000),labels=comma)+
+  theme_bw()
+       
+
+```
+```{r}
+job_title_salaries$remote_ratio<-as.factor(job_title_salaries$remote_ratio)
+remoteratio_names<-list("0"="Fully on Site","50"="50% Remote","100"="100% Remote") #creating a function to replace values
+ratio_labeller<-function(variable,value){
+    return(remoteratio_names[value])
+}
+ggplot(job_title_salaries,aes(x=experience_level,y=salary_in_usd,fill=remote_ratio))+ 
+  geom_bar(stat="summary",fun="mean")+
+  labs(x='Experience Level',
+       y='Annual Salary in USD',
+       title='Data Scientist Salaries based on expereince and Remote Setting')+
+  facet_wrap(~remote_ratio,ncol=1,labeller=ratio_labeller)+
+     scale_y_continuous(limit=c(0,150000),labels=comma)+
+    theme_bw()
+```
+```{r}
+ggplot(job_title_salaries,aes(x=experience_level,y=salary_in_usd,fill=us_residence))+ 
+  geom_bar(stat="summary",fun="mean",position="dodge")+
+  labs(x='Experience Level',
+       y='Annual Salary in USD',
+       title='Data Scientist Salaries based on Location')+
+  scale_y_continuous(limit=c(0,150000),labels=comma)+
+  theme_bw()
+
+```
+```{r}
+ggplot(job_title_salaries,aes(x=us_residence,y=salary_in_usd,fill=company_size))+ 
+  geom_bar(stat="summary",fun="mean",position="dodge")+
+  labs(x='Location',
+       y='Annual Salary in USD',
+       title='Data Scientist Salaries based on Location')+
+  scale_y_continuous(limit=c(0,150000),labels=comma)+
+  theme_bw()
+```
+
+
+```{r}
+mean(job_title_salaries$salary_in_usd) #average salary of all data scientists
+
+aggregate(job_title_salaries$salary_in_usd,list(job_title_salaries$experience_level),mean)
+
+aggregate(job_title_salaries$salary_in_usd,list(job_title_salaries$company_size),mean)
+
+aggregate(job_title_salaries$salary_in_usd,list(job_title_salaries$remote_ratio),mean)
+
+aggregate(job_title_salaries$salary_in_usd,list(job_title_salaries$us_residence),mean)
+```
+
+
