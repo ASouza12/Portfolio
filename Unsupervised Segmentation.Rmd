@@ -1,0 +1,115 @@
+---
+title: "Unsupervised Segmentation"
+author: "Alisha Souza"
+date: "2023-08-25"
+output: html_document
+---
+
+
+#Unsupervised Segmentation: Goal is to determine the number of clusters
+#k-means clustering
+```{r}
+library(tidyverse)
+library(readr)
+library(dplyr)
+library(stats)
+```
+
+```{r}
+customer_data<-read.csv("Customer_Dataset_Data.csv")
+```
+
+```{r}
+
+# Convert a specific column to numeric
+customer_data$TVWatchingHours <- as.numeric(customer_data$TVWatchingHours)
+customer_data$TownSize <- as.numeric(customer_data$TownSize)
+customer_data$Age <- as.numeric(customer_data$Age)
+customer_data$EducationYears <- as.numeric(customer_data$EducationYears)
+customer_data$EmploymentLength <- as.numeric(customer_data$EmploymentLength)
+customer_data$CarsOwned <- as.numeric(customer_data$CarsOwned)
+customer_data$CommuteTime <- as.numeric(customer_data$CommuteTime)
+customer_data$CardTenure <- as.numeric(customer_data$CardTenure)
+customer_data$CardItemsMonthly <- as.numeric(customer_data$CardItemsMonthly)
+customer_data$PhoneCoTenure <- as.numeric(customer_data$PhoneCoTenure)
+
+
+
+
+# Display the modified data frame
+print(customer_data)
+
+```
+
+#Need to create new df with selected numerical columns
+```{r}
+
+# Select specific columns to create a new data frame
+selected_columns <- c("TVWatchingHours", "TownSize", "Age", "EducationYears","EmploymentLength", "CarsOwned", "CommuteTime", "CardTenure", "CardItemsMonthly", "PhoneCoTenure", "DebtToIncomeRatio", "CreditDebt", "OtherDebt", "segment", "Female")  # Replace with the actual column names
+
+new_df <- customer_data[selected_columns]
+
+# Display the new data frame
+print(new_df)
+
+```
+
+
+
+```{r}
+new_df$Female=ifelse(customer_data$Gender=="female",1,0)
+
+points<-customer_data%>%select(-c("CustomerID", "Gender","Region","JobCategory", "UnionMember", "Retired","HHIncome", "LoanDefault","MaritalStatus","HouseholdSize","NumberPets","NumberCats","NumberDogs","NumberBirds","HomeOwner", "CarOwnership","CarBrand","CarValue","PoliticalPartyMem","Votes","CreditCard","CardSpendMonth","ActiveLifestyle","VoiceLastMonth", "VoiceOverTenure", "EquipmentRental", "EquipmentLastMonth","EquipmentOverTenure", "CallingCard", "WirelessData","DataLastMonth","DataOverTenure","Multiline","VM","Pager","Internet","CallerID","CallWait","CallForward","ThreeWayCalling","EBilling","OwnsPC","OwnsMobileDevice","OwnsGameSystem","OwnsFax","NewsSubscriber"))
+print(head(points))
+```
+
+```{r}
+points<-scale(points)
+print(head(points))
+```
+
+```{r}
+#set seed for code reproducibility 
+set.seed(1223)
+NUM_CLUSTERS<-6
+kclust<-kmeans(new_df, centers =NUM_CLUSTERS)
+
+#add segments to original dataset
+new_df$kmeans_segment<-as.factor(new_df$segment)
+
+print(new_df)
+```
+#Choosing a good number of clusters
+#We may want to investigate how the total within the cluster variation changes as we increase the number of segments.
+```{r}
+ks<-1:12
+tot_within_ss<-sapply(ks,function(k){
+  set.seed(1223)
+  cl<-kmeans(points,k)
+  cl$tot.withinss
+})
+
+plot(ks, tot_within_ss, type="b")
+```
+
+```{r}
+set.seed(1223)
+NUM_CLUSTERS<-6
+kclust<-kmeans_segment(points, centers=NUM_CLUSTERS, nstart=10)
+
+#add segment to original dataset
+new_df$kmeans_segment<-as.factor(kclust$cluster)
+```
+
+#Summarized results of each segment (like in rules based)
+```{r}
+new_df%>% add_count(kmeans_segment)%>%
+  group_by(kmeans_segment,n) %>%
+  summarise_all("mean")
+```
+#2d visual
+```{r}
+g<-ggplot(new_df)+geom_point(aes(x=TVWatchingHours,y=Age,colour=kmeans_segment))
+print(g)
+```
+

@@ -1,0 +1,75 @@
+---
+title: "Segmentation"
+author: "Alisha Souza"
+date: "2023-08-24"
+output: html_document
+---
+
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+```
+
+```{r}
+customer_data<-read.csv("Customer_Dataset_Data.csv")
+```
+
+```{r}
+g<-ggplot (data=customer_data) + geom_histogram(aes(x=PhoneCoTenure))
+print(g)
+```
+
+
+#cerate a rule using the cut function
+```{r}
+customer_data$PhoneCoTenureGroup<-cut(customer_data$PhoneCoTenure, breaks=c(-1,33,66,100), labels=c("low", "medium", "high"))
+
+summary(customer_data)
+
+```
+
+
+#segmenting data
+```{r}
+customer_data<-customer_data %>%mutate(segment=case_when(
+  PhoneCoTenureGroup == "low" & MaritalStatus == "Married" ~1,
+  PhoneCoTenureGroup == "medium" & MaritalStatus == "Married" ~2,
+  PhoneCoTenureGroup == "high" & MaritalStatus == "Married" ~3,
+  PhoneCoTenureGroup == "low" & MaritalStatus == "Unmarried" ~4,
+  PhoneCoTenureGroup == "medium" & MaritalStatus == "Unmarried" ~5,
+  PhoneCoTenureGroup == "high" & MaritalStatus == "Unmarried" ~6
+))
+
+customer_data%>%write_csv("output_of_segmentation.csv")
+
+```
+
+
+
+
+
+```{r}
+customer_data %>% select(-c ("CustomerID", "Gender","Region","JobCategory", "UnionMember", "Retired","HHIncome", "LoanDefault","MaritalStatus","HouseholdSize","NumberPets","NumberCats","NumberDogs","NumberBirds","HomeOwner", "CarOwnership","CarBrand","CarValue","PoliticalPartyMem","Votes","CreditCard","CardSpendMonth","ActiveLifestyle","VoiceLastMonth", "VoiceOverTenure", "EquipmentRental", "EquipmentLastMonth","EquipmentOverTenure", "CallingCard", "WirelessData","DataLastMonth","DataOverTenure","Multiline","VM","Pager","Internet","CallerID","CallWait","CallForward","ThreeWayCalling","EBilling","OwnsPC","OwnsMobileDevice","OwnsGameSystem","OwnsFax","NewsSubscriber","PhoneCoTenureGroup")) %>% add_count(segment) %>%
+  group_by(segment, n) %>%
+  summarise_all("mean")
+
+```
+
+#turned mt data into a dataframe
+```{r}
+
+# Creating a data frame
+df1 <- data.frame(customer_data)
+
+# Display the data frame
+print(df)
+
+```
+
+
+```{r}
+g<-ggplot(customer_data)+geom_point(aes(x=TVWatchingHoursGroup, y=Age, colour=as.factor(segment)))
+print(g)
+```
+
